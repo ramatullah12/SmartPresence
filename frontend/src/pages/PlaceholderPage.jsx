@@ -51,3 +51,4 @@ const PlaceholderPage = ({ title, stageNumber, description, features = [] }) => 
 };
 
 export default PlaceholderPage;
+

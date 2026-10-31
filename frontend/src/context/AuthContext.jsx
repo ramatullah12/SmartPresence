@@ -16,8 +16,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('smartpresence_user');
       }
     } else {
-      // Default ke akun Admin pada saat pertama kali dibuka agar user bisa langsung mengeksplorasi,
-      // namun tetap bisa Logout ke halaman Login kapan saja.
       const defaultAdmin = DEMO_USERS[0];
       setUser(defaultAdmin);
       localStorage.setItem('smartpresence_user', JSON.stringify(defaultAdmin));
@@ -27,16 +25,58 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    // Simulasi autentikasi (akan dihubungkan ke endpoint Laravel Sanctum /api/login pada tahap Backend)
-    const foundUser = DEMO_USERS.find(
+    const registeredCustomUsers = JSON.parse(
+      localStorage.getItem('smartpresence_custom_users') || '[]'
+    );
+    const allUsers = [...DEMO_USERS, ...registeredCustomUsers];
+
+    const foundUser = allUsers.find(
       (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
     );
 
     if (!foundUser) {
-      throw new Error('Email atau kata sandi tidak valid. Silakan gunakan akun demo yang tersedia.');
+      throw new Error(
+        'Email atau kata sandi tidak valid. Silakan klik salah satu kartu Akun Demo di atas atau daftar akun baru.'
+      );
     }
 
     const { password: _, ...safeUser } = foundUser;
+    setUser(safeUser);
+    localStorage.setItem('smartpresence_user', JSON.stringify(safeUser));
+    localStorage.setItem('smartpresence_token', `demo-sanctum-token-${safeUser.role}`);
+    return safeUser;
+  };
+
+  const register = async ({ name, email, password, role, identifier, department }) => {
+    const roleLabels = {
+      admin: 'Administrator Sistem',
+      pegawai: 'Pegawai / Dosen',
+      mahasiswa: 'Mahasiswa',
+    };
+
+    const initials = name
+      .split(' ')
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() || '')
+      .join('');
+
+    const newUser = {
+      id: Date.now(),
+      name,
+      email,
+      password,
+      role,
+      roleLabel: roleLabels[role] || 'Pengguna',
+      identifier: identifier || (role === 'mahasiswa' ? 'NIM. 2410511099' : 'NIP. 199501012024011001'),
+      department: department || (role === 'mahasiswa' ? 'S1 Teknik Informatika' : 'Fakultas Ilmu Komputer'),
+      avatar: initials || 'SP',
+    };
+
+    const existing = JSON.parse(localStorage.getItem('smartpresence_custom_users') || '[]');
+    existing.push(newUser);
+    localStorage.setItem('smartpresence_custom_users', JSON.stringify(existing));
+
+    const { password: _, ...safeUser } = newUser;
     setUser(safeUser);
     localStorage.setItem('smartpresence_user', JSON.stringify(safeUser));
     localStorage.setItem('smartpresence_token', `demo-sanctum-token-${safeUser.role}`);
@@ -60,7 +100,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, switchDemoRole }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, switchDemoRole }}>
       {children}
     </AuthContext.Provider>
   );

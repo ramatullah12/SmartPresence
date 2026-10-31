@@ -164,3 +164,4 @@ export const RECENT_ATTENDANCE_LOGS = [
     status: 'Hadir',
   },
 ];
+
